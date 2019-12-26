@@ -6,7 +6,6 @@
   "scripts": {},
   "repository": "https://github.com/ieb/signalk-eink",
   "keywords": [
-    "signalk-node-server-plugin",
     "signalk-webapp"
   ],
   "author": "Ian Boston <ianboston@gmail,com>",
