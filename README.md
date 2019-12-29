@@ -14,3 +14,19 @@ An alternative is to use the experimental or beta browsers  in e readers such as
 The browsers are mostly webkit based, although the version tends to be 4-6 years old. The nature of the Kindle version is unknown. The Kobo Beta Browser is believed to be a WebKit version from 2013. The have limited css support, minimal HTML5, Javascript is pre ES5 with no websocket support and nothing as sophisticated as JSON.parse. They do however have Canvas and AJAX.
 
 This project contains a UI that polls a NMEA endpoint for a NMEA sentence updates since the last poll. The UI uses Canvas and targets the limit capabilities of the a Kindle experimental browser. Currently being developed on a very old Kindle version 3.
+
+# Current state
+
+* Multiple pages
+* Landscape and Portrate
+* min, max, mean, standard deviation
+* linear and circular stats
+* Themes, night, day, red, green
+
+# Photos and screenshots
+
+![Kindle](screenshots/k1.jpg)
+![Kindle](screenshots/k2.jpg)
+![Kindle](screenshots/k3.jpg)
+![Chrome](screenshots/c1.png)
+![Chrome](screenshots/c2.png)

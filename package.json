@@ -3,7 +3,10 @@
   "version": "0.0.1",
   "description": "Signal K server plugin expose a NMEA0183 pull endpoint and eink UI",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "build": "parcel build src/index.html --public-url ./ ",
+    "watch": "parcel src/index.html --public-url ./ "
+  },
   "repository": "https://github.com/ieb/signalk-eink",
   "keywords": [
     "signalk-webapp"
@@ -11,5 +14,9 @@
   "author": "Ian Boston <ianboston@gmail,com>",
   "license": "ISC",
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-preset-env": "^1.7.0",
+    "parcel-bundler": "^1.12.4"
+  }
 }

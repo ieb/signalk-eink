@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>eInk Data</title>
+    <!-- 
+    Kindle Experimental Browser is a old version of WebKit, with no 
+    websockets or JSON support, very limited css, no console.log, and a significant number
+    of quirks. Its probably not ES5 compliant, and a test with react produced a non functional
+    hello world. It does hoave have Canvas Support which is what this UI uses.
+
+    Typiclly, this SPA remains open all the time on the Kindle and maintains its
+    state in the SPA. Dont expect it to maintain state when navigating away.
+
+    Dont expect rapid updates, eink was not designed to perform animation, but a 1s update for 
+    a clock in Canvas does work.
+-->
+</head>
+<body id="body">
+<canvas id="canvas" width="580" height="690" style="background-color:#FFF"></canvas>
+<div>
+<button id="rotate" >Rotate</buton>
+<button id="page" >Page</buton>
+<button id="theme" >Theme</buton>
+</div>
+<textarea rows="20" id="debug"></textarea>
+<script src="../libs/json2.js"></script>
+<script src="eink.js"></script>
+<!-- define the layout -->
+<script src="index.js"></script>
+</body>
+</html>
