@@ -25,6 +25,8 @@ This project contains a UI that polls a NMEA endpoint for a NMEA sentence update
 
 # Photos and screenshots
 
+The kindle photos show some of the problems with eink, where there are traces of previous numbers showing. The phone camera is good a picking up what the naked eye cant see. These tend to dissapear on full screen refresh. The number here update once every 2s.
+
 ![Kindle](screenshots/k1.jpg)
 ![Kindle](screenshots/k2.jpg)
 ![Kindle](screenshots/k3.jpg)
