@@ -1,81 +1,68 @@
 /*jshint node:false */
 "use strict";
 (function() {
-        function wind(path,symbol,x,y,size) {
-            return new EInkTextBox({ 
-                    path: path,
-                    x: x,
-                    y: y,
-                    labels: {
-                        bl: symbol,
-                        br: "deg"
-                    },
-                    scale: 180/Math.PI,
-                    precision: 0,
-                    boxSize: size
-                });
-        }
-        function speed(path, symbol, x, y, size) {
-            return new EInkTextBox({ 
-                    path: path,
-                    x: x,
-                    y: y,
-                    labels: {
-                        bl: symbol,
-                        br: "kn"
-                    },
-                    scale: 1.943844,
-                    precision: 1,
-                    boxSize: size
-                });
 
-        }
-        function meters(path, symbol, x, y, size) {
-            return new EInkTextBox({ 
-                    path: path,
-                    x: x,
-                    y: y,
-                    labels: {
-                        bl: symbol,
-                        br: "m"
-                    },
-                    scale: 1,
-                    precision: 1,
-                    boxSize: size
-                });
+/*
+Raw PGNs seen on Luna from Raymarine bus
 
-        }
-        function angle(path, symbol, x, y, size) {
-            return new EInkTextBox({ 
-                    path: path,
-                    x: x,
-                    y: y,
-                    labels: {
-                        bl: symbol,
-                        br: "deg"
-                    },
-                    withStats: false,
-                    scale: 180/Math.PI,
-                    precision: 0,
-                    boxSize: size
-                });
-        }
+EInkPilot
+   steering.autopilot.target.headingMagnetic.value (rad) pilot
+   steering.autopilot.state.value  (text)  pilot
+
+EInkLog
+   navigation.trip.log (m)   distance
+   navigation.log (m) distance
+   
+EInkFix
+   navigation.gnss.methodQuality (text) fix
+   navigation.gnss.horizontalDilution (float) fix
+   navigation.gnss.type (text) fix
+   navigation.gnss.satellites (int) fix
+   navigation.gnss.integrity (text) fix
+   
+EInkPossition
+   navigation.position (lat, lon, deg) position
+   navigation.datetime (date)
+   
+EInkCurrent
+   environment.current (drift (m/s), setTrue (rad))
+   
+EInkAttitude
+   navigation.attitude (roll, pitch, yaw rad)
+
+
+   environment.water.temperature (K) temperature
+   
+
+   steering.rudderAngle.value  (rad) angle
+   navigation.magneticVariation (rad) angle
+   navigation.courseOverGroundTrue (rad) angle 
+   navigation.rateOfTurn (rad/s) anglerate
+   navigation.speedThroughWater (m/s) speed
+   navigation.headingMagnetic (rad) angle
+   navigation.speedOverGround (m/s) speed
+   environment.wind.speedApparent (m/s) speed
+   environment.wind.angleApparent (rad) wind
+   environment.depth.belowTransducer (m) meters
+
+   navigation.speedThroughWaterReferenceType (text)
+
+*/
         var display = {
             "default": [
-                wind('environment.wind.angleApparent','awa',0,0,100),
-                speed('environment.wind.speedApparent','aws',0,1,100),
-                meters('environment.depth.belowTransducer','dbt',0,2,100),
-                wind('environment.wind.angleTrueWater','twa',1,0,100),
-                speed('environment.wind.speedTrue','tws',1,1,100),
-                angle('navigation.courseOverGroundMagnetic','cogm',1,2,100),
-                speed('navigation.speedOverGround','sog',2,0,100),
-                speed('performance.velocityMadeGood','vmg',2,1,100),
-                speed('navigation.speedThroughWater','stw',2,2,100)
-            ],
-            "large": [
-                speed('navigation.speedOverGround','sog',0,0,200),
-                speed('performance.velocityMadeGood','vmg',0,1,200),
-                speed('navigation.speedThroughWater','stw',0,2,200)
+                new EInkRelativeAngle('environment.wind.angleApparent','awa', 0,0),
+                new EInkSpeed('environment.wind.speedApparent', 'aws',        0,1),
+                new EInkDistance('environment.depth.belowTransducer', 'dbt',  0,2),
+                new EInkPilot(1,0),
+                new EInkLog(1,1),
+                new EInkFix(1,2),
+                new EInkPossition(2,0),
+                new EInkRelativeAngle('environment.wind.angleTrueWater','twa',1,0),
+                new EInkSpeed('environment.wind.speedTrue', 'tws',            1,1),
+                new EInkBearing('navigation.courseOverGroundMagnetic', 'cogm',1,2),
+//                new EInkSpeed('navigation.speedOverGround', 'sog',            2,0),
+                new EInkSpeed('performance.velocityMadeGood', 'vmg',          2,1),
+                new EInkSpeed('navigation.speedThroughWater', 'stw',          2,2)
             ],
         };
         var themes = {

@@ -94,6 +94,11 @@ EInkDrawingContext.prototype.setTheme = function(theme) {
 EInkDrawingContext.prototype.update = function(state) {
 
     log(state);
+    for(var k in this.displayList) {
+        for (var i = 0; i < this.displayList[k].length; i++) {
+            this.displayList[k][i].update(state, this.dataStoreFactory);
+        }
+    }
     for (var i = 0; i < this.displayPage.length; i++) {
         this.displayPage[i].render(this.ctx, state, this.theme, this.dataStoreFactory);
     };
@@ -328,15 +333,12 @@ EInkTextBox = function(options) {
     this.pathElements = options.path.split(".");
     this.boxSize = options.boxSize || 100;
     this.labels = options.labels || {};
-    this.format = options.format || function(v) { return v };
-    this.rangefn = options.range;
     this.x = options.x || 0;
     this.y = options.y || 0;
-    this.out = 0;
     this.withStats = (options.withStats===undefined)?true:options.withStats;
     this.scale = options.scale || 1 ;
-    this.precision = (options.precision===undefined)?10:Math.pow(10,options.precision);
-    this.currentValue = 0.0;
+    this.precision = (options.precision ===undefined)?1:options.precision;
+    this.out = 0;
     this.data = undefined;
     if ( this.withStats ) {
         this.outmean = 0;
@@ -345,33 +347,65 @@ EInkTextBox = function(options) {
         this.outmin = 0;
     }
 }
-EInkTextBox.prototype.resolve = function(state) {
+EInkTextBox.prototype.resolve = function(state, path) {
+    var pathElements = this.pathElements;
+    if ( path ) {
+        pathElements = path.split(".");
+    }
     var n = state;
-    for (var i = 0; n && i < this.pathElements.length; i++) {
-        n = n[this.pathElements[i]];
+    for (var i = 0; n && i < pathElements.length; i++) {
+        n = n[pathElements[i]];
     }
     return n;
 };
 
 
-EInkTextBox.prototype.toDispay = function(v) {
-    return Math.round(v*this.precision)/this.precision;
+EInkTextBox.prototype.toDispay = function(v, precision) {
+    return v.toFixed((precision === undefined)?this.precision:precision);
 }
 
-EInkTextBox.prototype.formatOutput = function(data) {
+EInkTextBox.prototype.formatOutput = function(data, scale, precision) {
+    scale = scale || this.scale;
     if ( !this.withStats) {
-        this.out = this.toDispay(data.currentValue*this.scale);
+        this.out = this.toDispay(data.currentValue*scale, precision);
     } else {
-        this.out = this.toDispay(data.currentValue*this.scale);
-        this.outmax = this.toDispay(data.max*this.scale);
-        this.outmin = this.toDispay(data.min*this.scale);
-        this.outmean = this.toDispay(data.mean*this.scale);
-        this.outstdev = this.toDispay(data.stdev*this.scale);            
+        this.out = this.toDispay(data.currentValue*scale, precision);
+        this.outmax = this.toDispay(data.max*scale, precision);
+        this.outmin = this.toDispay(data.min*scale, precision);
+        this.outmean = this.toDispay(data.mean*scale, precision);
+        this.outstdev = this.toDispay(data.stdev*scale, precision);            
     }
+    return this.out;
 }
 
 
+EInkTextBox.prototype.startDraw = function(ctx, theme) {
+  var sz = this.boxSize;
+  var t = this.y*1.3*sz, l = this.x*2.3*sz,  w = sz*2.2, h= sz*1.2;
+  ctx.translate(l,t); 
+  ctx.beginPath();
+  ctx.fillStyle = theme.background;
+  ctx.fillRect(0,0,w,h);
+  ctx.strokeRect(0,0,w,h);
+  ctx.fillStyle = theme.foreground;
+  ctx.strokeStyle = theme.foreground;
+  return {
+    t, l, w, h, sz
+  };
+};
 
+EInkTextBox.prototype.endDraw = function(ctx, dim) {
+  ctx.translate(-dim.l,-dim.t);
+}
+
+EInkTextBox.prototype.update = function(state, dataStoreFactory) {
+  var d = this.resolve(state);
+  if (!d) {
+    return;
+  }
+  var data = dataStoreFactory.getStore(d, this.path);
+  data.updateValues(d.value, state);
+}
 
 EInkTextBox.prototype.render = function(ctx, state, theme, dataStoreFactory) {
   var d = this.resolve(state);
@@ -379,59 +413,468 @@ EInkTextBox.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     return;
   }
   var data = dataStoreFactory.getStore(d, this.path);
-  data.updateValues(d.value, state);
   this.formatOutput(data);
 
-  var sz = this.boxSize;
   var labels = this.labels;
-  var t = this.y*1.3*sz, l = this.x*2.3*sz,  w = sz*2.2, h= sz*1.2;
-  ctx.translate(l,t); 
-  ctx.font =  sz+"px arial";
+  var dim = this.startDraw(ctx, theme);
+
+  ctx.font =  dim.sz+"px arial";
   ctx.textBaseline="bottom";
   ctx.textAlign="center";
-  ctx.beginPath();
-  ctx.fillStyle = theme.background;
-  ctx.fillRect(0,0,w,h);
-  ctx.strokeRect(0,0,w,h);
-
-
-  ctx.fillStyle = theme.foreground;
-  ctx.strokeStyle = theme.foreground;
-  ctx.fillText(this.out, w*0.5,h);
+  ctx.fillText(this.out, dim.w*0.5,dim.h);
   if ( labels ) {
-    ctx.font =  (sz/4)+"px arial";
+    ctx.font =  (dim.sz/4)+"px arial";
     ctx.textAlign="left";
     if ( labels.tl  && !this.withStats ) {
-        ctx.fillText(labels.tl, w*0.05,sz/4);
+        ctx.fillText(labels.tl, dim.w*0.05, sz/4);
     }
     if ( labels.bl ) {
-        ctx.fillText(labels.bl, w*0.05,h);
+        ctx.fillText(labels.bl, dim.w*0.05, dim.h);
     }
     ctx.textAlign="right";
     if ( labels.tr  && !this.withStats ) {
-        ctx.fillText(labels.tr, w*0.95,sz/4);
+        ctx.fillText(labels.tr, dim.w*0.95, dim.sz/4);
     }
     if ( labels.br ) {
-        ctx.fillText(labels.br, w*0.95,h);
+        ctx.fillText(labels.br, dim.w*0.95, dim.h);
     }
   }
   if ( this.withStats ) {
       ctx.textAlign="left";
-      ctx.fillText(this.outmin, w*0.05,sz/4);
+      ctx.fillText(this.outmin, dim.w*0.05,dim.sz/4);
       ctx.textAlign="right";
-      ctx.fillText(this.outmax, w*0.95,sz/4);
-      ctx.font =  (sz/8)+"px arial";
+      ctx.fillText(this.outmax, dim.w*0.95,dim.sz/4);
+      ctx.font =  (dim.sz/8)+"px arial";
       ctx.textAlign="center";
-      ctx.fillText(this.outmean, w*0.5,sz/8);
-      ctx.fillText(this.outstdev, w*0.5,sz/4);
+      ctx.fillText(this.outmean, dim.w*0.5,dim.sz/8);
+      ctx.fillText(this.outstdev, dim.w*0.5,dim.sz/4);
   }
-  ctx.translate(-l,-t);    
+  this.endDraw(ctx, dim);
+}
+
+
+EInkPilot = function(x, y, boxSize) {
+    var options = {
+        path: "none",
+        x: x,
+        y: y,
+        withStats: false,
+        scale: 180/Math.PI,
+        precision: 0,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkPilot, EInkTextBox);
+
+EInkPilot.prototype.update = function( state, dataStoreFactory) {
+    // no action as there are no stats stored centrally.
+    return;
+}
+
+
+EInkPilot.prototype.render = function(ctx, state, theme, dataStoreFactory) {
+    var d = this.resolve(state, "steering.autopilot.state");
+    if ( !d ) {
+        return;
+    }
+    var autoState = d.value;
+    var h = this.resolve(state, "steering.autopilot.target.headingMagnetic");
+    var heading = "-";
+    if ( h ) {
+        heading = this.formatOutput({ currentValue: h.value});
+    }
+
+    var dim = this.startDraw(ctx,theme);
+    ctx.font =  dim.sz+"px arial";
+    ctx.textBaseline="bottom";
+    ctx.textAlign="center";
+    ctx.fillText(heading, dim.w*0.5,dim.h);
+
+    ctx.font =  (dim.sz/4)+"px arial";
+    ctx.textAlign="left";
+    ctx.fillText(autoState, dim.w*0.05, dim.h);
+    ctx.textAlign="right";
+    ctx.fillText("deg", dim.w*0.95, dim.h);
+    ctx.textAlign="center";
+    ctx.fillText("pilot", dim.w*0.5, (dim.sz/4));
+    this.endDraw(ctx, dim);
+};
+
+
+
+EInkLog = function(x,y,boxSize) {
+    var options = {
+        path: "none",
+        x: x,
+        y: y,
+        withStats: false,
+        scale: 1/1852,
+        precision: 1,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkLog, EInkTextBox);
+
+
+EInkLog.prototype.update = function( state, dataStoreFactory) {
+    // no action as there are no stats stored centrally.
+    return;
+}
+
+EInkLog.prototype.render = function(ctx, state, theme, dataStoreFactory) {
+    // there are 2 paths
+    // navigation.trip.log (m)   distance
+    // navigation.log (m) distance
+
+    var t = this.resolve(state, "navigation.trip.log");
+    var l = this.resolve(state, "navigation.log");
+    if ( ! (t || l) ) {
+        return;
+    }
+    var trip = "0.0";
+    if ( t ) {
+        trip = this.formatOutput({currentValue: t.value},this.scale,2);
+    }
+    var log = "0.0";
+    if ( l ) {
+        log = this.formatOutput({currentValue: l.value});
+    }
+    // this will need some adjustment
+    var dim = this.startDraw(ctx,theme);
+    ctx.font =  (dim.sz/2.5)+"px arial";
+    ctx.textAlign="center";
+    ctx.textBaseline="top";
+    ctx.fillText(trip, dim.w*0.5,dim.sz/4);
+    ctx.textBaseline="alphabetic";
+    ctx.fillText(log, dim.w*0.5,dim.h-dim.sz/4);
+
+    ctx.textBaseline="bottom";
+    ctx.font =  (dim.sz/4)+"px arial";
+    ctx.textAlign="left";
+    ctx.fillText("trip", dim.w*0.05, dim.sz/4);
+    ctx.fillText("log", dim.w*0.05, dim.h);
+    ctx.textAlign="right";
+    ctx.fillText("Nm", dim.w*0.95, dim.h);
+
+
+    this.endDraw(ctx, dim);
 }
 
 
 
+EInkFix = function(x,y,boxSize) {
+    var options = {
+        path: "none",
+        x: x,
+        y: y,
+        withStats: false,
+        scale: 1/1852,
+        precision: 1,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkFix, EInkTextBox);
+EInkFix.prototype.update = function( state, dataStoreFactory) {
+    // no action as there are no stats stored centrally.
+    return;
+}
+EInkFix.prototype.render = function(ctx, state, theme, dataStoreFactory) {
+   /*EInkFix
+   navigation.gnss.methodQuality (text) fix
+   navigation.gnss.horizontalDilution (float) fix
+   navigation.gnss.type (text) fix
+   navigation.gnss.satellites (int) fix
+   navigation.gnss.integrity (text) fix
+    */
+
+    if ( !(state && state.navigation && state.navigation.gnss) ) {
+        return;
+    }
+    var gnss = state.navigation.gnss;
+    var methodQuality = (gnss.methodQuality)?gnss.methodQuality.value:"-";
+    var horizontalDilution = (gnss.horizontalDilution)?gnss.horizontalDilution.value:"-";
+    var type = (gnss.type)?gnss.type.value:"-";
+    var satellites = (gnss.satellites)?gnss.satellites.value:"-";
+    var integrity = (gnss.integrity)?gnss.integrity.value:"-";
+
+    // this will need some adjustment
+    var dim = this.startDraw(ctx,theme);
+    ctx.font =  dim.sz/6+"px arial";
+    ctx.textBaseline="bottom";
+    ctx.textAlign="left";
+    ctx.fillText(methodQuality, dim.w*0.05, dim.sz/4);
+    ctx.fillText("sat:"+satellites, dim.w*0.05,2*dim.sz/4);
+    ctx.fillText("hdop:"+horizontalDilution, dim.w*0.05,3*dim.sz/4);
+    ctx.font =  dim.sz/6+"px arial";
+    ctx.fillText(type, dim.w*0.05,dim.sz);
+
+
+    this.endDraw(ctx, dim);
+}
+
+EInkPossition = function(x,y,boxSize) {
+    var options = {
+        path: "none",
+        x: x,
+        y: y,
+        withStats: false,
+        scale: 1,
+        precision: 1,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkPossition, EInkTextBox);
+EInkPossition.prototype.update = function( state, dataStoreFactory) {
+    // no action as there are no stats stored centrally.
+    return;
+}
+EInkPossition.prototype.toLatitude = function(lat) {
+    var NS = "N"
+    if ( lat < 0 ) {
+        lat = -lat;
+        NS = "S";
+    } 
+    var d = Math.floor(lat);
+    var m = (60*(lat - d)).toFixed(3);
+    return ("00"+d).slice(-2)+"\u00B0"+("00"+m).slice(-6)+"\u2032"+NS;
+}
+EInkPossition.prototype.toLongitude = function(lon) {
+    var EW = "E"
+    if ( lon < 0 ) {
+        lon = -lon;
+        EW = "W";
+    } 
+    var d =  Math.floor(lon);
+    var m = (60*(lon - d)).toFixed(3);
+    return ("000"+d).slice(-3)+"\u00B0"+("00"+m).slice(-6)+"\u2032"+EW;
+};
+
+
+EInkPossition.prototype.render = function(ctx, state, theme, dataStoreFactory) {
+   /*
+   EInkPossition
+   navigation.position (lat, lon, deg) position
+   navigation.datetime (date)
+    */
+
+    var lat = "--\u00B0--.---\u2032N", lon = "---\u00B0--.---\u2032W", ts = "-";
+
+    if ( state && state.navigation && state.navigation.position ) {
+        lat = this.toLatitude(state.navigation.position.value.latitude);
+        lon = this.toLongitude(state.navigation.position.value.longitude);
+    }
+    if (state && state.navigation && state.navigation.datetime) {
+        ts = new Date(Date.parse(state.navigation.datetime.value));
+        ts = ts.toUTCString();
+    }
+    // this will need some adjustment
+    var dim = this.startDraw(ctx,theme);
+    ctx.font =  dim.sz/3+"px arial";
+    ctx.textBaseline="bottom";
+    ctx.textAlign="right";
+    ctx.fillText(lat, dim.w*0.95,dim.h*0.2+dim.sz/3);
+    ctx.fillText(lon, dim.w*0.95,dim.h*0.2+2*dim.sz/3);
+    ctx.font =  (dim.sz/7)+"px arial";
+    ctx.fillText(ts, dim.w*0.95, dim.h*0.95);
+
+
+    this.endDraw(ctx, dim);
+}
+
+EInkCurrent = function(options) {
+    options.withStats = false;
+    EInkTextBox.call(this, options);
+}
+extend(EInkCurrent, EInkTextBox);
+EInkCurrent.prototype.update = function( state, dataStoreFactory) {
+    // no action as there are no stats stored centrally.
+    return;
+}
+EInkCurrent.prototype.render = function(ctx, state, theme, dataStoreFactory) {
+   /*
+    EInkCurrent
+    environment.current (drift (m/s), setTrue (rad))
+    */
+
+    if ( !(state && state.environment && state.environment.current) ) {
+        return;
+    }
+
+    var drift = this.formatOutput({ currentValue: state.environment.current.value.drift }, 1.943844,1);
+    var set = this.formatOutput({ currentValue: state.environment.current.value.set }, Math.PI/180,1);
 
 
 
+    // this will need some adjustment
+    var dim = this.startDraw(ctx,theme);
+    ctx.font =  dim.sz/2+"px arial";
+    ctx.textBaseline="bottom";
+    ctx.textAlign="center";
+    ctx.fillText(drift, dim.w*0.5,dim.h*0.5);
+    ctx.fillText(set, dim.w*0.5,dim.h);
 
+    ctx.font =  (dim.sz/4)+"px arial";
+    ctx.textAlign="left";
+    ctx.fillText("current", dim.w*0.05, dim.h);
+    ctx.textAlign="right";
+    ctx.fillText("deg, kn", dim.w*0.95, dim.h);
+
+    this.endDraw(ctx, dim);
+}
+
+
+EInkAttitude = function(options) {
+    options.withStats = false;
+    options.scale = Math.PI/180;
+    options.precision = 1;
+    EInkTextBox.call(this, options);
+}
+extend(EInkAttitude, EInkTextBox);
+EInkAttitude.prototype.update = function( state, dataStoreFactory) {
+    // no action as there are no stats stored centrally.
+    return;
+}
+EInkAttitude.prototype.render = function(ctx, state, theme, dataStoreFactory) {
+   /*
+    EInkAttitude
+    navigation.attitude (roll, pitch, yaw rad)
+    */
+
+    if ( !(state && state.navigation && state.navigation.attitude) ) {
+        return;
+    }
+    var attitude = state.navigation.attitude;
+    var roll = this.formatOutput({ currentValue: attitude.value.roll });
+    var pitch = this.formatOutput({ currentValue: attitude.value.pitch });
+    var yaw = this.formatOutput({ currentValue: attitude.value.yaw });
+
+
+
+    // this will need some adjustment
+    var dim = this.startDraw(ctx,theme);
+    ctx.font =  dim.sz/2+"px arial";
+    ctx.textBaseline="bottom";
+    ctx.textAlign="center";
+    ctx.fillText(roll, dim.w*0.5,dim.h*0.5);
+    ctx.fillText(pitch, dim.w*0.5,dim.h);
+
+    ctx.font =  (dim.sz/4)+"px arial";
+    ctx.textAlign="left";
+    ctx.fillText("roll & pitch", dim.w*0.05, dim.h);
+    ctx.textAlign="right";
+    ctx.fillText("deg", dim.w*0.95, dim.h);
+
+    this.endDraw(ctx, dim);
+}
+
+
+
+EInkRelativeAngle = function(path, label, x, y, boxSize, precision ) {
+    var options = {
+        path: path,
+        labels: {
+            bl: label,
+            br: "deg"
+        },
+        x: x,
+        y: y,
+        withStats: true,
+        scale: 180/Math.PI,
+        precision: (precision==undefined)?0:precision,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkRelativeAngle, EInkTextBox);
+
+
+EInkSpeed = function(path, label, x, y, boxSize, precision) {
+    var options = {
+        path: path,
+        labels: {
+            bl: label,
+            br: "kn"
+        },
+        x: x,
+        y: y,
+        withStats: true,
+        scale: 1.943844,
+        precision: (precision==undefined)?0:precision,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkSpeed, EInkTextBox);
+
+EInkDistance = function(path, label, x, y, boxSize, precision) {
+    var options = {
+        path: path,
+        labels: {
+            bl: label,
+            br: "m"
+        },
+        x: x,
+        y: y,
+        withStats: true,
+        scale: 1,
+        precision: (precision==undefined)?1:precision,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkDistance, EInkTextBox);
+
+
+EInkBearing = function(path, label, x, y, boxSize, precision) {
+    var options = {
+        path: path,
+        labels: {
+            bl: label,
+            br: "deg"
+        },
+        x: x,
+        y: y,
+        withStats: true,
+        scale: 180/Math.PI,
+        precision: (precision==undefined)?0:precision,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkBearing, EInkTextBox);
+
+EInkTemperature = function(path, label, x, y, boxSize, precision) {
+    var options = {
+        path: path,
+        labels: {
+            bl: label,
+            br: "C"
+        },
+        x: x,
+        y: y,
+        withStats: true,
+        scale: 1,
+        precision: (precision==undefined)?0:precision,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkTemperature, EInkTextBox);
+
+
+EInkTemperature.prototype.formatOutput = function(data) {
+    if ( !this.withStats) {
+        this.out = this.toDispay(data.currentValue-273.15, precision);
+    } else {
+        this.out = this.toDispay(data.currentValue-273.15, precision);
+        this.outmax = this.toDispay(data.max-273.15, precision);
+        this.outmin = this.toDispay(data.min-273.15, precision);
+        this.outmean = this.toDispay(data.mean-273.15, precision);
+        this.outstdev = this.toDispay(data.stdev-273.15, precision);            
+    }
+}
 
