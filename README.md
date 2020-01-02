@@ -22,10 +22,14 @@ This project contains a UI that polls a NMEA endpoint for a NMEA sentence update
 * min, max, mean, standard deviation
 * linear and circular stats
 * Themes, night, day, red, green
+* Calculates missing sensors where possible.
+* Caclulates full set of performance data from a Polar, currently set to Pogo1250 polar.
 
 # Photos and screenshots
 
 The kindle photos show some of the problems with eink, where there are traces of previous numbers showing. The phone camera is good a picking up what the naked eye cant see. These tend to dissapear on full screen refresh. The number here update once every 2s.
+
+![Chrome](screenshots/c3.png)
 
 ![Kindle](screenshots/k1.jpg)
 ![Kindle](screenshots/k2.jpg)
