@@ -53,16 +53,21 @@ EInkAttitude
                 new EInkRelativeAngle('environment.wind.angleApparent','awa', 0,0),
                 new EInkSpeed('environment.wind.speedApparent', 'aws',        0,1),
                 new EInkDistance('environment.depth.belowTransducer', 'dbt',  0,2),
+                new EInkPossition(0,3),
                 new EInkPilot(1,0),
                 new EInkLog(1,1),
                 new EInkFix(1,2),
-                new EInkPossition(2,0),
-                new EInkRelativeAngle('environment.wind.angleTrueWater','twa',1,0),
-                new EInkSpeed('environment.wind.speedTrue', 'tws',            1,1),
-                new EInkBearing('navigation.courseOverGroundMagnetic', 'cogm',1,2),
-//                new EInkSpeed('navigation.speedOverGround', 'sog',            2,0),
-                new EInkSpeed('performance.velocityMadeGood', 'vmg',          2,1),
-                new EInkSpeed('navigation.speedThroughWater', 'stw',          2,2)
+                new EInkCurrent(1,3),
+                new EInkSpeed('navigation.speedOverGround', 'sog',            2,0),
+                new EInkBearing('navigation.courseOverGroundTrue','cogt',2,1),
+                new EInkSpeed('navigation.speedThroughWater', 'stw',          2,2),
+                new EInkAttitude(2,3),
+                new EInkRelativeAngle('environment.wind.angleTrueWater','twa',3,0),
+                new EInkSpeed('performance.velocityMadeGood', 'vmg',          3,1),
+                new EInkSpeed('environment.wind.speedTrue', 'tws',            3,2),
+                new EInkBearing('navigation.courseOverGroundMagnetic', 'cogm',3,3),
+                new EInkTemperature('environment.water.temperature','water',4,0),
+                new EInkSys(4,1)
             ],
         };
         var themes = {
@@ -84,14 +89,22 @@ EInkAttitude
                 background: "black"
             }
         }
-        var drawingContext = new EInkDrawingContext({
+        var drawingOptions = {
             canvas: document.getElementById("canvas"),            
             themes: themes,
+            portrait: true, 
+            width: 1500,
+            height: 600,
             theme: "night",
-            displayList: display
-        });
+            displayList: display            
+        };
+        if ( isKindle ) {
+            drawingOptions.portrait = false;
+        }
+        var drawingContext = new EInkDrawingContext(drawingOptions);
         var updater =  new EInkUpdater({
             url: '/signalk/v1/api/vessels/self',
+            calculations: new Calcs(),
             context: drawingContext,
             period: 1000
         });

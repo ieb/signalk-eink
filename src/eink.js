@@ -16,7 +16,7 @@ try {
 } catch (e) {
     document.getElementById("debug").value = document.getElementById("debug").value + "\nFailed Fixes\n"+e;
 }
-var isKindle = (Object.create === undefined);
+isKindle = (Object.create === undefined);
 debug("Kindle: "+isKindle);
 function log(msg) {
     if (!isKindle) {
@@ -56,7 +56,7 @@ EInkDrawingContext = function(options) {
     this.displayPage = this.displayList[options.page || "default"];
     this.ctx = canvas.getContext("2d");
     this.setTheme(options.theme || "default");
-    this.setOrientation(options.orientation, options.width || 700, options.height || 580);
+    this.setOrientation(options.portrait, options.width || 700, options.height || 580);
 }
 
 EInkDrawingContext.prototype.setOrientation = function(portrait, width, height) {
@@ -92,8 +92,6 @@ EInkDrawingContext.prototype.setTheme = function(theme) {
 }
 
 EInkDrawingContext.prototype.update = function(state) {
-
-    log(state);
     for(var k in this.displayList) {
         for (var i = 0; i < this.displayList[k].length; i++) {
             this.displayList[k][i].update(state, this.dataStoreFactory);
@@ -103,6 +101,7 @@ EInkDrawingContext.prototype.update = function(state) {
         this.displayPage[i].render(this.ctx, state, this.theme, this.dataStoreFactory);
     };
 };
+
 
 
 EInkUIController = function(options) {
@@ -157,6 +156,9 @@ EInkUpdater = function(options) {
     if ( isKindle ) {
         this.period = Math.max(this.period,2000);
     }
+    this.calculations = options.calculations || {
+        enhance: function() {}
+    };
     this.context = options.context;
     if ( ! XMLHttpRequest.DONE ) {
         XMLHttpRequest.UNSENT = XMLHttpRequest.UNSENT || 0;
@@ -184,15 +186,22 @@ EInkUpdater.prototype.update = function() {
     httpRequest.onreadystatechange = function() {
         if (httpRequest.readyState === XMLHttpRequest.DONE) {
           if (httpRequest.status === 200) {
+            var start = Date.now();
             var state = JSON.parse(httpRequest.responseText);
             state._ts = new Date().getTime();
+            Calcs.prototype.save(state, 'sys.updateTime', that.updateTime, new Date(), "ms", "Timetaken to process update", true);
+            that.calculations.enhance(state);
             that.context.update(state);
+            that.updateTime = Date.now() - start;
           }
         }
     };
     httpRequest.open('GET', this.url);
     httpRequest.send();
 };
+
+
+
 
 // stats classes -------------------------------------
 
@@ -335,16 +344,19 @@ EInkTextBox = function(options) {
     this.labels = options.labels || {};
     this.x = options.x || 0;
     this.y = options.y || 0;
+    this.displayUnits = options.displayUnits || "";
+    this.displayPositive = options.displayPositive;
+    this.displayNegative = options.displayNegative;
     this.withStats = (options.withStats===undefined)?true:options.withStats;
     this.scale = options.scale || 1 ;
     this.precision = (options.precision ===undefined)?1:options.precision;
-    this.out = 0;
+    this.out = "no data";
     this.data = undefined;
     if ( this.withStats ) {
-        this.outmean = 0;
-        this.outstdev = 0;
-        this.outmax = 1;
-        this.outmin = 0;
+        this.outmean = "-";
+        this.outstdev = "-";
+        this.outmax = "-";
+        this.outmin = "-";
     }
 }
 EInkTextBox.prototype.resolve = function(state, path) {
@@ -360,9 +372,22 @@ EInkTextBox.prototype.resolve = function(state, path) {
 };
 
 
-EInkTextBox.prototype.toDispay = function(v, precision) {
-    return v.toFixed((precision === undefined)?this.precision:precision);
+EInkTextBox.prototype.toDispay = function(v, precision, displayUnits, neg, pos) {
+    var dis = (displayUnits===undefined)?this.displayUnits:displayUnits;
+    var neg = (neg===undefined)?this.displayNegative:neg;
+    var pos = (pos===undefined)?this.displayPositive:pos;
+    var res = v.toFixed((precision === undefined)?this.precision:precision);
+    if ( neg && res < 0) {
+        res = -res;
+        res = neg+res+dis;
+    } else if ( pos && res > 0) {
+        res = pos+res+dis;
+    } else {
+        res = res+dis;
+    }
+    return res;
 }
+
 
 EInkTextBox.prototype.formatOutput = function(data, scale, precision) {
     scale = scale || this.scale;
@@ -372,8 +397,8 @@ EInkTextBox.prototype.formatOutput = function(data, scale, precision) {
         this.out = this.toDispay(data.currentValue*scale, precision);
         this.outmax = this.toDispay(data.max*scale, precision);
         this.outmin = this.toDispay(data.min*scale, precision);
-        this.outmean = this.toDispay(data.mean*scale, precision);
-        this.outstdev = this.toDispay(data.stdev*scale, precision);            
+        this.outmean = "\u03BC "+this.toDispay(data.mean*scale, precision);
+        this.outstdev = "\u03C3 "+this.toDispay(data.stdev*scale, precision, this.displayUnits, "","");
     }
     return this.out;
 }
@@ -398,6 +423,38 @@ EInkTextBox.prototype.endDraw = function(ctx, dim) {
   ctx.translate(-dim.l,-dim.t);
 }
 
+EInkTextBox.prototype.twoLineLeft = function(ctx, dim, l1, l2) {
+    ctx.font =  dim.sz/3+"px arial";
+    ctx.textBaseline="bottom";
+    ctx.textAlign="left";
+    ctx.fillText(l1, dim.w*0.1,dim.h*0.2+dim.sz/3);
+    ctx.fillText(l2 , dim.w*0.1,dim.h*0.2+2*dim.sz/3);
+
+}
+EInkTextBox.prototype.twoLineRight = function(ctx, dim, l1, l2) {
+    ctx.font =  dim.sz/3+"px arial";
+    ctx.textBaseline="bottom";
+    ctx.textAlign="right";
+    ctx.fillText(l1, dim.w*0.95,dim.h*0.2+dim.sz/3);
+    ctx.fillText(l2 , dim.w*0.95,dim.h*0.2+2*dim.sz/3);
+
+}
+
+EInkTextBox.prototype.baseLine = function(ctx, dim, l, r) {
+    ctx.textBaseline="bottom";
+    ctx.font =  (dim.sz/4)+"px arial";
+    if ( l ) {
+        ctx.textAlign="left";
+        ctx.fillText(l, dim.w*0.05, dim.h);
+    }
+    if ( r ) {
+        ctx.textAlign="right";
+        ctx.fillText(r, dim.w*0.95, dim.h);        
+    }
+};
+
+
+
 EInkTextBox.prototype.update = function(state, dataStoreFactory) {
   var d = this.resolve(state);
   if (!d) {
@@ -409,19 +466,26 @@ EInkTextBox.prototype.update = function(state, dataStoreFactory) {
 
 EInkTextBox.prototype.render = function(ctx, state, theme, dataStoreFactory) {
   var d = this.resolve(state);
-  if (!d) {
-    return;
+  if (d) {
+    var data = dataStoreFactory.getStore(d, this.path);
+    this.formatOutput(data);
   }
-  var data = dataStoreFactory.getStore(d, this.path);
-  this.formatOutput(data);
 
   var labels = this.labels;
   var dim = this.startDraw(ctx, theme);
 
+
   ctx.font =  dim.sz+"px arial";
   ctx.textBaseline="bottom";
   ctx.textAlign="center";
-  ctx.fillText(this.out, dim.w*0.5,dim.h);
+  var txtW = ctx.measureText(this.out).width; 
+  if ( txtW > (dim.w*0.8) ) {
+      ctx.font =  dim.sz*((dim.w*0.8)/txtW)+"px arial";
+      ctx.fillText(this.out, dim.w*0.5,dim.h*0.9);
+  } else {
+      ctx.fillText(this.out, dim.w*0.5,dim.h);
+
+  }
   if ( labels ) {
     ctx.font =  (dim.sz/4)+"px arial";
     ctx.textAlign="left";
@@ -491,11 +555,7 @@ EInkPilot.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     ctx.textAlign="center";
     ctx.fillText(heading, dim.w*0.5,dim.h);
 
-    ctx.font =  (dim.sz/4)+"px arial";
-    ctx.textAlign="left";
-    ctx.fillText(autoState, dim.w*0.05, dim.h);
-    ctx.textAlign="right";
-    ctx.fillText("deg", dim.w*0.95, dim.h);
+    this.baseLine(ctx, dim, autoState, "deg");
     ctx.textAlign="center";
     ctx.fillText("pilot", dim.w*0.5, (dim.sz/4));
     this.endDraw(ctx, dim);
@@ -523,6 +583,7 @@ EInkLog.prototype.update = function( state, dataStoreFactory) {
     return;
 }
 
+
 EInkLog.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     // there are 2 paths
     // navigation.trip.log (m)   distance
@@ -543,21 +604,9 @@ EInkLog.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     }
     // this will need some adjustment
     var dim = this.startDraw(ctx,theme);
-    ctx.font =  (dim.sz/2.5)+"px arial";
-    ctx.textAlign="center";
-    ctx.textBaseline="top";
-    ctx.fillText(trip, dim.w*0.5,dim.sz/4);
-    ctx.textBaseline="alphabetic";
-    ctx.fillText(log, dim.w*0.5,dim.h-dim.sz/4);
 
-    ctx.textBaseline="bottom";
-    ctx.font =  (dim.sz/4)+"px arial";
-    ctx.textAlign="left";
-    ctx.fillText("trip", dim.w*0.05, dim.sz/4);
-    ctx.fillText("log", dim.w*0.05, dim.h);
-    ctx.textAlign="right";
-    ctx.fillText("Nm", dim.w*0.95, dim.h);
-
+    this.twoLineLeft(ctx, dim, "t: "+trip,"l: "+log);
+    this.baseLine(ctx, dim, "log","Nm");
 
     this.endDraw(ctx, dim);
 }
@@ -653,6 +702,19 @@ EInkPossition.prototype.toLongitude = function(lon) {
     return ("000"+d).slice(-3)+"\u00B0"+("00"+m).slice(-6)+"\u2032"+EW;
 };
 
+EInkPossition.prototype.parseDate = function(dateStr) {
+    const regex = /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(.*)Z/gm;
+    let m;
+
+    if ((m = regex.exec(dateStr)) !== null) {
+        var s = Math.floor(m[6]);
+        var ms = m[6]-s;
+        var date = new Date(Date.UTC(m[1],m[2]-1,m[3],m[4],m[5],s,ms));
+        return date.toUTCString();
+    }
+    return dateStr;
+};
+
 
 EInkPossition.prototype.render = function(ctx, state, theme, dataStoreFactory) {
    /*
@@ -667,17 +729,13 @@ EInkPossition.prototype.render = function(ctx, state, theme, dataStoreFactory) {
         lat = this.toLatitude(state.navigation.position.value.latitude);
         lon = this.toLongitude(state.navigation.position.value.longitude);
     }
-    if (state && state.navigation && state.navigation.datetime) {
-        ts = new Date(Date.parse(state.navigation.datetime.value));
-        ts = ts.toUTCString();
+    if (state && state.navigation && state.navigation.datetime.value ) {
+        ts = this.parseDate(state.navigation.datetime.value);
     }
     // this will need some adjustment
+
     var dim = this.startDraw(ctx,theme);
-    ctx.font =  dim.sz/3+"px arial";
-    ctx.textBaseline="bottom";
-    ctx.textAlign="right";
-    ctx.fillText(lat, dim.w*0.95,dim.h*0.2+dim.sz/3);
-    ctx.fillText(lon, dim.w*0.95,dim.h*0.2+2*dim.sz/3);
+    this.twoLineRight(ctx, dim, lat, lon);
     ctx.font =  (dim.sz/7)+"px arial";
     ctx.fillText(ts, dim.w*0.95, dim.h*0.95);
 
@@ -685,8 +743,16 @@ EInkPossition.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     this.endDraw(ctx, dim);
 }
 
-EInkCurrent = function(options) {
-    options.withStats = false;
+EInkCurrent = function(x,y,boxSize) {
+    var options = {
+        path: "none",
+        x: x,
+        y: y,
+        withStats: false,
+        scale: 1,
+        precision: 1,
+        boxSize: boxSize || 100
+    }
     EInkTextBox.call(this, options);
 }
 extend(EInkCurrent, EInkTextBox);
@@ -705,32 +771,30 @@ EInkCurrent.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     }
 
     var drift = this.formatOutput({ currentValue: state.environment.current.value.drift }, 1.943844,1);
-    var set = this.formatOutput({ currentValue: state.environment.current.value.set }, Math.PI/180,1);
+    var set = this.formatOutput({ currentValue: state.environment.current.value.setTrue }, 180/Math.PI,1);
 
 
 
     // this will need some adjustment
     var dim = this.startDraw(ctx,theme);
-    ctx.font =  dim.sz/2+"px arial";
-    ctx.textBaseline="bottom";
-    ctx.textAlign="center";
-    ctx.fillText(drift, dim.w*0.5,dim.h*0.5);
-    ctx.fillText(set, dim.w*0.5,dim.h);
 
-    ctx.font =  (dim.sz/4)+"px arial";
-    ctx.textAlign="left";
-    ctx.fillText("current", dim.w*0.05, dim.h);
-    ctx.textAlign="right";
-    ctx.fillText("deg, kn", dim.w*0.95, dim.h);
+    this.twoLineLeft(ctx, dim,drift+" Kn",set+"\u00B0T" );
+    this.baseLine(ctx, dim, "current");
 
     this.endDraw(ctx, dim);
 }
 
 
-EInkAttitude = function(options) {
-    options.withStats = false;
-    options.scale = Math.PI/180;
-    options.precision = 1;
+EInkAttitude = function(x,y,boxSize) {
+    var options = {
+        path: "none",
+        x: x,
+        y: y,
+        withStats: false,
+        scale: 180/Math.PI,
+        precision: 1,
+        boxSize: boxSize || 100
+    }
     EInkTextBox.call(this, options);
 }
 extend(EInkAttitude, EInkTextBox);
@@ -754,20 +818,14 @@ EInkAttitude.prototype.render = function(ctx, state, theme, dataStoreFactory) {
 
 
 
+
     // this will need some adjustment
     var dim = this.startDraw(ctx,theme);
-    ctx.font =  dim.sz/2+"px arial";
-    ctx.textBaseline="bottom";
-    ctx.textAlign="center";
-    ctx.fillText(roll, dim.w*0.5,dim.h*0.5);
-    ctx.fillText(pitch, dim.w*0.5,dim.h);
 
-    ctx.font =  (dim.sz/4)+"px arial";
-    ctx.textAlign="left";
-    ctx.fillText("roll & pitch", dim.w*0.05, dim.h);
-    ctx.textAlign="right";
-    ctx.fillText("deg", dim.w*0.95, dim.h);
+    this.twoLineLeft(ctx, dim, "roll:"+roll+"\u00B0","pitch:"+pitch+"\u00B0" );
+    this.baseLine(ctx,  dim, "attitude", "deg")
 
+ 
     this.endDraw(ctx, dim);
 }
 
@@ -783,6 +841,10 @@ EInkRelativeAngle = function(path, label, x, y, boxSize, precision ) {
         x: x,
         y: y,
         withStats: true,
+        displayUnits: "\u00B0",
+        displayNegative: "P",
+        displayPositive: "S",
+        textSize: 3,
         scale: 180/Math.PI,
         precision: (precision==undefined)?0:precision,
         boxSize: boxSize || 100
@@ -790,6 +852,23 @@ EInkRelativeAngle = function(path, label, x, y, boxSize, precision ) {
     EInkTextBox.call(this, options);
 }
 extend(EInkRelativeAngle, EInkTextBox);
+
+EInkRelativeAngle.prototype.formatOutput = function(data, scale, precision) {
+    scale = scale || this.scale;
+
+    if ( !this.withStats) {
+        this.out = this.toDispay(data.currentValue*scale, precision);
+    } else {
+        this.out = this.toDispay(data.currentValue*scale, precision);
+        this.outmax = this.toDispay(data.max*scale, precision);
+        this.outmin = this.toDispay(data.min*scale, precision);
+        this.outmean = "\u03BC "+this.toDispay(data.mean*scale, precision);
+        this.outstdev = "\u03C3 "+this.toDispay(data.stdev*scale, 1, this.displayUnits, "","");
+    }
+    return this.out;
+}
+
+
 
 
 EInkSpeed = function(path, label, x, y, boxSize, precision) {
@@ -803,7 +882,7 @@ EInkSpeed = function(path, label, x, y, boxSize, precision) {
         y: y,
         withStats: true,
         scale: 1.943844,
-        precision: (precision==undefined)?0:precision,
+        precision: (precision==undefined)?1:precision,
         boxSize: boxSize || 100
     }
     EInkTextBox.call(this, options);
@@ -828,7 +907,6 @@ EInkDistance = function(path, label, x, y, boxSize, precision) {
 }
 extend(EInkDistance, EInkTextBox);
 
-
 EInkBearing = function(path, label, x, y, boxSize, precision) {
     var options = {
         path: path,
@@ -847,6 +925,7 @@ EInkBearing = function(path, label, x, y, boxSize, precision) {
 }
 extend(EInkBearing, EInkTextBox);
 
+// todo
 EInkTemperature = function(path, label, x, y, boxSize, precision) {
     var options = {
         path: path,
@@ -858,7 +937,7 @@ EInkTemperature = function(path, label, x, y, boxSize, precision) {
         y: y,
         withStats: true,
         scale: 1,
-        precision: (precision==undefined)?0:precision,
+        precision: (precision==undefined)?1:precision,
         boxSize: boxSize || 100
     }
     EInkTextBox.call(this, options);
@@ -868,13 +947,63 @@ extend(EInkTemperature, EInkTextBox);
 
 EInkTemperature.prototype.formatOutput = function(data) {
     if ( !this.withStats) {
-        this.out = this.toDispay(data.currentValue-273.15, precision);
+        this.out = this.toDispay(data.currentValue-273.15, this.precision);
     } else {
-        this.out = this.toDispay(data.currentValue-273.15, precision);
-        this.outmax = this.toDispay(data.max-273.15, precision);
-        this.outmin = this.toDispay(data.min-273.15, precision);
-        this.outmean = this.toDispay(data.mean-273.15, precision);
-        this.outstdev = this.toDispay(data.stdev-273.15, precision);            
+        this.out = this.toDispay(data.currentValue-273.15, this.precision);
+        this.outmax = this.toDispay(data.max-273.15, this.precision);
+        this.outmin = this.toDispay(data.min-273.15, this.precision);
+        this.outmean = "\u03BC "+this.toDispay(data.mean-273.15, this.precision);
+        this.outstdev = "\u03C3 "+this.toDispay(data.stdev, this.precision);            
     }
 }
+
+// todo
+EInkSys = function(x, y, boxSize) {
+    var options = {
+        path: "none",
+        labels: {
+            bl: "sys"
+        },
+        x: x,
+        y: y,
+        withStats: false,
+        scale: 1,
+        precision: 0,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkSys, EInkTextBox);
+
+EInkSys.prototype.render = function(ctx, state, theme, dataStoreFactory) {
+
+    if ( !(state && state.sys ) ) {
+        return;
+    }
+    var sys = state.sys;
+    var polarBuild = (sys.polarBuild)?sys.polarBuild.value:"-";
+    var calcTime = (sys.calcTime)?sys.calcTime.value:"-";
+    var updateTime = (sys.updateTime)?sys.updateTime.value:"-";
+
+
+
+    // this will need some adjustment
+    var dim = this.startDraw(ctx,theme);
+
+    ctx.font =  dim.sz/6+"px arial";
+    ctx.textBaseline="bottom";
+    ctx.textAlign="left";
+    ctx.fillText("init: "+polarBuild, dim.w*0.05, dim.sz/4);
+    ctx.fillText("calc: "+calcTime, dim.w*0.05,2*dim.sz/4);
+    ctx.fillText("up: "+updateTime, dim.w*0.05,3*dim.sz/4);
+
+
+
+    this.endDraw(ctx, dim);
+}
+
+
+
+
+
 
