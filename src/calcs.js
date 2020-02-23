@@ -153,7 +153,11 @@ Calcs.prototype.enhance = function(state) {
     }
     this.save(state, 'sys.polarBuild', this.performance.fineBuildTime, timestamp, "ms","Timetaken to build the Polar Table", true);
     this.save(state, 'sys.calcTime', Date.now() - calcStart, timestamp, "ms","Timetaken perform caculations", true);
-
+    if ( window.performance && window.performance.memory  ) {
+        this.save(state, 'sys.jsHeapSizeLimit', window.performance.memory.jsHeapSizeLimit , timestamp, "bytes","JS Heap Limit", true);
+        this.save(state, 'sys.totalJSHeapSize', window.performance.memory.totalJSHeapSize , timestamp, "bytes","JS Heap Size", true);
+        this.save(state, 'sys.usedJSHeapSize', window.performance.memory.usedJSHeapSize , timestamp, "bytes","JS Heap Used", true);
+    }
 }
 
 var pogo1250Polar = {

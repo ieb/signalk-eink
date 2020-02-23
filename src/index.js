@@ -47,27 +47,87 @@ EInkAttitude
 
    navigation.speedThroughWaterReferenceType (text)
 
+Calculated internally provided sufficient data is provided from the server.
+    navigation.courseOverGroundTrue if missing
+    navigation.courseOverGroundMagnetic if missing
+    navigation.headingTrue if missing
+    navigation.headingMagnetic if missing
+    performance.leeway needs roll, awa, stw
+
+    environment.wind.angleTrueWater if missing, requires awa, aws, stw
+    environment.wind.speedTrue if missing, requires awa, aws, stw
+
+    the following require tws && twa && stw && hdt 
+    performance.polarSpeed polar speed at this twa
+*    performance.polarSpeedRatio polar speed ratio
+    performance.oppositeTrackMagnetic opposite track magnetic bearing
+    performance.oppositeTrackTrue opposite track true bearing
+    performance.oppositeHeadingMagnetic opposite geading magnetic bearing
+    performance.oppositeHeadingTrue opposite geading true bearing
+    performance.targetTwa target twa on this track for best vmg
+    performance.targetStw target speed on at best vmg and angle
+    performance.targetVmg target vmg -ve == downwind
+    performance.vmg current vmg at polar speed
+    performance.polarVmg current vmg at best angle
+*    performance.polarVmgRatio ratio between vmg and optimal vmg
+    environment.wind.windDirectionTrue True wind direction
+    environment.wind.windDirectionMagnetic Magnetic wind direction
+
+
+
+
+
 */
+
+        var row = 0;
+        var col = 0;
+        function r() {
+            var r = row;
+            row++;
+            if ( row > 3) {
+                row = 0;
+                col++;
+            }
+            return r;
+        }
+        function c() {
+            return col;
+        }
+
         var display = {
             "default": [
-                new EInkRelativeAngle('environment.wind.angleApparent','awa', 0,0),
-                new EInkSpeed('environment.wind.speedApparent', 'aws',        0,1),
-                new EInkDistance('environment.depth.belowTransducer', 'dbt',  0,2),
-                new EInkPossition(0,3),
-                new EInkPilot(1,0),
-                new EInkLog(1,1),
-                new EInkFix(1,2),
-                new EInkCurrent(1,3),
-                new EInkSpeed('navigation.speedOverGround', 'sog',            2,0),
-                new EInkBearing('navigation.courseOverGroundTrue','cogt',2,1),
-                new EInkSpeed('navigation.speedThroughWater', 'stw',          2,2),
-                new EInkAttitude(2,3),
-                new EInkRelativeAngle('environment.wind.angleTrueWater','twa',3,0),
-                new EInkSpeed('performance.velocityMadeGood', 'vmg',          3,1),
-                new EInkSpeed('environment.wind.speedTrue', 'tws',            3,2),
-                new EInkBearing('navigation.courseOverGroundMagnetic', 'cogm',3,3),
-                new EInkTemperature('environment.water.temperature','water',4,0),
-                new EInkSys(4,1)
+                new EInkRelativeAngle('environment.wind.angleApparent','awa', c(),r()),
+                new EInkSpeed('environment.wind.speedApparent', 'aws',        c(),r()),
+                new EInkSpeed('navigation.speedThroughWater', 'stw',          c(),r()),
+                new EInkDistance('environment.depth.belowTransducer', 'dbt',  c(),r()),
+                new EInkRelativeAngle('environment.wind.angleTrueWater','twa',c(),r()),
+                new EInkSpeed('environment.wind.speedTrue', 'tws',            c(),r()),
+                new EInkRelativeAngle('performance.leeway','leeway',c(),r(), undefined, 1),
+                new EInkAttitude(c(),r()),
+                new EInkSpeed('navigation.speedOverGround', 'sog',            c(),r()),
+                new EInkBearing('navigation.courseOverGroundMagnetic', 'cogm',c(),r()),
+                new EInkPossition(c(),r()),
+                new EInkLog(c(),r()),
+                new EInkCurrent(c(),r()),
+                new EInkPilot(c(),r()),
+                new EInkFix(c(),r()),
+                new EInkTemperature('environment.water.temperature','water',c(),r()),
+                new EInkBearing('environment.wind.windDirectionMagnetic', 'windM',c(),r()),
+                new EInkSpeed('performance.velocityMadeGood', 'vmg',          c(),r()),
+                new EInkSys(c(),r()),
+                new EInkBearing('navigation.headingMagnetic','hdm',c(),r()),
+                new EInkSpeed('performance.polarSpeed', 'polar stw',        c(),r()),
+                new EInkSpeed('performance.vmg', 'polar vmg',        c(),r()),
+                new EInkSpeed('performance.polarVmg', 'best polar vmg',        c(),r()),
+                new EInkSpeed('performance.targetStw', 'target stw',        c(),r()),
+                new EInkSpeed('performance.targetVmg', 'target vmg',        c(),r()),
+                new EInkBearing('performance.oppositeTrackMagnetic', 'op tack m',c(),r()),
+                new EInkBearing('performance.oppositeHeadingMagnetic', 'op head m',c(),r()),
+                new EInkRelativeAngle('performance.targetTwa','target twa',c(),r()),
+                new EInkRatio('performance.polarSpeedRatio',"polar stw perf", c(), r()),
+                new EInkRatio('performance.polarVmgRatio',"polar vmg perf", c(), r())
+
+
             ],
         };
         var themes = {
@@ -93,7 +153,7 @@ EInkAttitude
             canvas: document.getElementById("canvas"),            
             themes: themes,
             portrait: true, 
-            width: 1500,
+            width: 1850,
             height: 600,
             theme: "night",
             displayList: display            

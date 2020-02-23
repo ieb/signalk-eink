@@ -984,6 +984,9 @@ EInkSys.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     var polarBuild = (sys.polarBuild)?sys.polarBuild.value:"-";
     var calcTime = (sys.calcTime)?sys.calcTime.value:"-";
     var updateTime = (sys.updateTime)?sys.updateTime.value:"-";
+    var jsHeapSizeLimit = (sys.jsHeapSizeLimit)?(sys.jsHeapSizeLimit.value/(1024*1024)).toFixed(1):"-";
+    var totalJSHeapSize = (sys.totalJSHeapSize)?(sys.totalJSHeapSize.value/(1024*1024)).toFixed(1):"-";
+    var usedJSHeapSize = (sys.usedJSHeapSize)?(sys.usedJSHeapSize.value/(1024*1024)).toFixed(1):"-";
 
 
 
@@ -996,11 +999,46 @@ EInkSys.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     ctx.fillText("init: "+polarBuild, dim.w*0.05, dim.sz/4);
     ctx.fillText("calc: "+calcTime, dim.w*0.05,2*dim.sz/4);
     ctx.fillText("up: "+updateTime, dim.w*0.05,3*dim.sz/4);
+    ctx.fillText("mem: "+usedJSHeapSize, dim.w*0.05,4*dim.sz/4);
 
 
 
     this.endDraw(ctx, dim);
 }
+
+EInkRatio = function(path, label, x, y, boxSize, precision ) {
+    var options = {
+        path: path,
+        labels: {
+            bl: label,
+            br: "%"
+        },
+        x: x,
+        y: y,
+        withStats: true,
+        scale: 100,
+        precision: (precision==undefined)?0:precision,
+        boxSize: boxSize || 100
+    }
+    EInkTextBox.call(this, options);
+}
+extend(EInkRatio, EInkTextBox);
+
+EInkRatio.prototype.formatOutput = function(data, scale, precision) {
+    scale = scale || this.scale;
+
+    if ( !this.withStats) {
+        this.out = this.toDispay(data.currentValue*scale, precision);
+    } else {
+        this.out = this.toDispay(data.currentValue*scale, precision);
+        this.outmax = this.toDispay(data.max*scale, precision);
+        this.outmin = this.toDispay(data.min*scale, precision);
+        this.outmean = "\u03BC "+this.toDispay(data.mean*scale, precision);
+        this.outstdev = "\u03C3 "+this.toDispay(data.stdev*scale, 1, this.displayUnits, "","");
+    }
+    return this.out;
+}
+
 
 
 
