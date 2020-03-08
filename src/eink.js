@@ -38,7 +38,7 @@ EInkDataStoreFactory = function(options) {
 
 EInkDataStoreFactory.prototype.getStore = function(d, path) {
     if ( !this.dataStores[path]) {
-        if (d.meta.units === "rad") {
+        if (d.meta !== undefined && d.meta.units === "rad") {
             this.dataStores[path] = new EInkCircularStats();
         } else {
             this.dataStores[path] = new EInkStats();
