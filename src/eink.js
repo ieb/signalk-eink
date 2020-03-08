@@ -725,11 +725,11 @@ EInkPossition.prototype.render = function(ctx, state, theme, dataStoreFactory) {
 
     var lat = "--\u00B0--.---\u2032N", lon = "---\u00B0--.---\u2032W", ts = "-";
 
-    if ( state && state.navigation && state.navigation.position ) {
+    if ( state && state.navigation && state.navigation.position && state.navigation.position.value ) {
         lat = this.toLatitude(state.navigation.position.value.latitude);
         lon = this.toLongitude(state.navigation.position.value.longitude);
     }
-    if (state && state.navigation && state.navigation.datetime.value ) {
+    if (state && state.navigation && state.navigation.datetime && state.navigation.datetime.value ) {
         ts = this.parseDate(state.navigation.datetime.value);
     }
     // this will need some adjustment
