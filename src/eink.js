@@ -94,11 +94,19 @@ EInkDrawingContext.prototype.setTheme = function(theme) {
 EInkDrawingContext.prototype.update = function(state) {
     for(var k in this.displayList) {
         for (var i = 0; i < this.displayList[k].length; i++) {
-            this.displayList[k][i].update(state, this.dataStoreFactory);
+            try {
+                this.displayList[k][i].update(state, this.dataStoreFactory);
+            } catch(e) {
+                debug("Error "+e);
+            }
         }
     }
     for (var i = 0; i < this.displayPage.length; i++) {
-        this.displayPage[i].render(this.ctx, state, this.theme, this.dataStoreFactory);
+        try {
+            this.displayPage[i].render(this.ctx, state, this.theme, this.dataStoreFactory);
+        } catch (e) {
+            debug("Error "+e);
+        }
     };
 };
 
@@ -538,15 +546,14 @@ EInkPilot.prototype.update = function( state, dataStoreFactory) {
 
 
 EInkPilot.prototype.render = function(ctx, state, theme, dataStoreFactory) {
+    var heading = "-", autoState = "-";
     var d = this.resolve(state, "steering.autopilot.state");
-    if ( !d ) {
-        return;
-    }
-    var autoState = d.value;
-    var h = this.resolve(state, "steering.autopilot.target.headingMagnetic");
-    var heading = "-";
-    if ( h ) {
-        heading = this.formatOutput({ currentValue: h.value});
+    if ( d ) {
+        autoState = d.value;
+        h = this.resolve(state, "steering.autopilot.target.headingMagnetic");
+        if ( h ) {
+            heading = this.formatOutput({ currentValue: h.value});
+        }
     }
 
     var dim = this.startDraw(ctx,theme);
@@ -591,16 +598,16 @@ EInkLog.prototype.render = function(ctx, state, theme, dataStoreFactory) {
 
     var t = this.resolve(state, "navigation.trip.log");
     var l = this.resolve(state, "navigation.log");
-    if ( ! (t || l) ) {
-        return;
-    }
-    var trip = "0.0";
-    if ( t ) {
-        trip = this.formatOutput({currentValue: t.value},this.scale,2);
-    }
-    var log = "0.0";
-    if ( l ) {
-        log = this.formatOutput({currentValue: l.value});
+    var trip = "-.-", log = "-.-";
+    if ( (t || l) ) {
+        trip = "0.0";
+        if ( t ) {
+            trip = this.formatOutput({currentValue: t.value},this.scale,2);
+        }
+        log = "0.0";
+        if ( l ) {
+            log = this.formatOutput({currentValue: l.value});
+        }
     }
     // this will need some adjustment
     var dim = this.startDraw(ctx,theme);
@@ -639,15 +646,20 @@ EInkFix.prototype.render = function(ctx, state, theme, dataStoreFactory) {
    navigation.gnss.integrity (text) fix
     */
 
-    if ( !(state && state.navigation && state.navigation.gnss) ) {
-        return;
+    var gnss = "-", 
+        methodQuality = "-", 
+        horizontalDilution = "-", 
+        type="-", 
+        satellites="-", 
+        integrity = "-";
+    if ( (state && state.navigation && state.navigation.gnss) ) {
+        gnss = state.navigation.gnss;
+        methodQuality = (gnss.methodQuality)?gnss.methodQuality.value:"-";
+        horizontalDilution = (gnss.horizontalDilution)?gnss.horizontalDilution.value:"-";
+        type = (gnss.type)?gnss.type.value:"-";
+        satellites = (gnss.satellites)?gnss.satellites.value:"-";
+        integrity = (gnss.integrity)?gnss.integrity.value:"-";
     }
-    var gnss = state.navigation.gnss;
-    var methodQuality = (gnss.methodQuality)?gnss.methodQuality.value:"-";
-    var horizontalDilution = (gnss.horizontalDilution)?gnss.horizontalDilution.value:"-";
-    var type = (gnss.type)?gnss.type.value:"-";
-    var satellites = (gnss.satellites)?gnss.satellites.value:"-";
-    var integrity = (gnss.integrity)?gnss.integrity.value:"-";
 
     // this will need some adjustment
     var dim = this.startDraw(ctx,theme);
@@ -765,13 +777,11 @@ EInkCurrent.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     EInkCurrent
     environment.current (drift (m/s), setTrue (rad))
     */
-
-    if ( !(state && state.environment && state.environment.current) ) {
-        return;
+    var drift = "-", set = "-";
+    if ( (state && state.environment && state.environment.current) ) {
+        drift = this.formatOutput({ currentValue: state.environment.current.value.drift }, 1.943844,1);
+        set = this.formatOutput({ currentValue: state.environment.current.value.setTrue }, 180/Math.PI,1);
     }
-
-    var drift = this.formatOutput({ currentValue: state.environment.current.value.drift }, 1.943844,1);
-    var set = this.formatOutput({ currentValue: state.environment.current.value.setTrue }, 180/Math.PI,1);
 
 
 
@@ -807,14 +817,13 @@ EInkAttitude.prototype.render = function(ctx, state, theme, dataStoreFactory) {
     EInkAttitude
     navigation.attitude (roll, pitch, yaw rad)
     */
-
-    if ( !(state && state.navigation && state.navigation.attitude) ) {
-        return;
+    var attitude = "-", roll = "-", pitch = "-", yaw = "-";
+    if ( (state && state.navigation && state.navigation.attitude) ) {
+        attitude = state.navigation.attitude;
+        roll = this.formatOutput({ currentValue: attitude.value.roll });
+        pitch = this.formatOutput({ currentValue: attitude.value.pitch });
+        yaw = this.formatOutput({ currentValue: attitude.value.yaw });
     }
-    var attitude = state.navigation.attitude;
-    var roll = this.formatOutput({ currentValue: attitude.value.roll });
-    var pitch = this.formatOutput({ currentValue: attitude.value.pitch });
-    var yaw = this.formatOutput({ currentValue: attitude.value.yaw });
 
 
 
