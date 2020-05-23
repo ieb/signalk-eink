@@ -1,5 +1,7 @@
 /*jshint node:false */
 "use strict";
+
+
 (function() {
 
 /*
@@ -78,7 +80,6 @@ Calculated internally provided sufficient data is provided from the server.
 
 
 */
-
         var row = 0;
         var col = 0;
         function r() {
@@ -94,41 +95,50 @@ Calculated internally provided sufficient data is provided from the server.
             return col;
         }
 
-        var display = {
-            "default": [
+
+
+        var displayList = {
+            defaultView: [
                 new EInkRelativeAngle('environment.wind.angleApparent','awa', c(),r()),
                 new EInkSpeed('environment.wind.speedApparent', 'aws',        c(),r()),
                 new EInkSpeed('navigation.speedThroughWater', 'stw',          c(),r()),
                 new EInkDistance('environment.depth.belowTransducer', 'dbt',  c(),r()),
+
                 new EInkRelativeAngle('environment.wind.angleTrueWater','twa',c(),r()),
                 new EInkSpeed('environment.wind.speedTrue', 'tws',            c(),r()),
                 new EInkRelativeAngle('performance.leeway','leeway',c(),r(), undefined, 1),
                 new EInkAttitude(c(),r()),
+
                 new EInkSpeed('navigation.speedOverGround', 'sog',            c(),r()),
                 new EInkBearing('navigation.courseOverGroundMagnetic', 'cogm',c(),r()),
                 new EInkPossition(c(),r()),
                 new EInkLog(c(),r()),
+
                 new EInkCurrent(c(),r()),
                 new EInkPilot(c(),r()),
                 new EInkFix(c(),r()),
                 new EInkTemperature('environment.water.temperature','water',c(),r()),
+
                 new EInkBearing('environment.wind.windDirectionMagnetic', 'windM',c(),r()),
                 new EInkSpeed('performance.velocityMadeGood', 'vmg',          c(),r()),
                 new EInkSys(c(),r()),
                 new EInkBearing('navigation.headingMagnetic','hdm',c(),r()),
+
                 new EInkSpeed('performance.polarSpeed', 'polar stw',        c(),r()),
                 new EInkSpeed('performance.vmg', 'polar vmg',        c(),r()),
                 new EInkSpeed('performance.polarVmg', 'best polar vmg',        c(),r()),
                 new EInkSpeed('performance.targetStw', 'target stw',        c(),r()),
+
                 new EInkSpeed('performance.targetVmg', 'target vmg',        c(),r()),
                 new EInkBearing('performance.oppositeTrackMagnetic', 'op tack m',c(),r()),
                 new EInkBearing('performance.oppositeHeadingMagnetic', 'op head m',c(),r()),
                 new EInkRelativeAngle('performance.targetTwa','target twa',c(),r()),
+
                 new EInkRatio('performance.polarSpeedRatio',"polar stw perf", c(), r()),
                 new EInkRatio('performance.polarVmgRatio',"polar vmg perf", c(), r())
 
 
-            ],
+            ]
         };
         var themes = {
             "day": {
@@ -148,20 +158,19 @@ Calculated internally provided sufficient data is provided from the server.
                 foreground: "green",
                 background: "black"
             }
-        }
+        };
+        var isPortrait = !(Object.create === undefined);
         var drawingOptions = {
             canvas: document.getElementById("canvas"),            
             themes: themes,
-            portrait: true, 
+            portrait: !isKindle, 
             width: 1850,
             height: 600,
             theme: "night",
-            displayList: display            
+            displayList: displayList
         };
-        if ( isKindle ) {
-            drawingOptions.portrait = false;
-        }
         var drawingContext = new EInkDrawingContext(drawingOptions);
+
         var updater =  new EInkUpdater({
             url: '/signalk/v1/api/vessels/self',
             calculations: new Calcs(),
@@ -180,6 +189,7 @@ Calculated internally provided sufficient data is provided from the server.
             themes: ["day","night","nightred","nightvision"]
         });
 
+
         document.getElementById("body").addEventListener("keydown", function(e) {
             debug("got keydown");
         });
@@ -195,5 +205,5 @@ Calculated internally provided sufficient data is provided from the server.
 
 
 
-
 })();
+

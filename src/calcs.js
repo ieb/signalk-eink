@@ -8,6 +8,7 @@ Calcs = function(options) {
 "use strict";
 
 
+
 Calcs.prototype.resolveAndCreate = function(state, path) {
     var pathElements = path.split(".");
     var n = state;
@@ -400,5 +401,4 @@ Performance.prototype.calcPerformance = function(tws, twa, stw, trueHeading, mag
       oppositeHeadingMagnetic: oppositeHeadingMagnetic
     };
 }
-
 

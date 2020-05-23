@@ -48,12 +48,12 @@ EInkDataStoreFactory.prototype.getStore = function(d, path) {
 };
 
 
-EInkDrawingContext = function(options) {
+EInkDrawingContext = function(options, displayList) {
     this.dataStoreFactory = new EInkDataStoreFactory();
     this.canvas = options.canvas;
     this.themes = options.themes || {};
     this.displayList = options.displayList;
-    this.displayPage = this.displayList[options.page || "default"];
+    this.displayPage = this.displayList[options.page || "defaultView"];
     this.ctx = canvas.getContext("2d");
     this.setTheme(options.theme || "default");
     this.setOrientation(options.portrait, options.width || 700, options.height || 580);
@@ -1047,6 +1047,8 @@ EInkRatio.prototype.formatOutput = function(data, scale, precision) {
     }
     return this.out;
 }
+
+
 
 
 
