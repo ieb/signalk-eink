@@ -23,6 +23,82 @@
 <button id="theme" >Theme</buton>
 </div>
 <textarea rows="20" id="debug"></textarea>
+<h4>Information/Help</h4>
+<pre>
+
+
+
+Data Taken from PGNs
+EInkPilot
+   steering.autopilot.target.headingMagnetic.value (rad) pilot
+   steering.autopilot.state.value  (text)  pilot
+
+EInkLog
+   navigation.trip.log (m)   distance
+   navigation.log (m) distance
+   
+EInkFix
+   navigation.gnss.methodQuality (text) fix
+   navigation.gnss.horizontalDilution (float) fix
+   navigation.gnss.type (text) fix
+   navigation.gnss.satellites (int) fix
+   navigation.gnss.integrity (text) fix
+   
+EInkPossition
+   navigation.position (lat, lon, deg) position
+   navigation.datetime (date)
+   
+EInkCurrent
+   environment.current (drift (m/s), setTrue (rad))
+   
+EInkAttitude
+   navigation.attitude (roll, pitch, yaw rad)
+
+
+   environment.water.temperature (K) temperature
+   
+
+   steering.rudderAngle.value  (rad) angle
+   navigation.magneticVariation (rad) angle
+   navigation.courseOverGroundTrue (rad) angle 
+   navigation.rateOfTurn (rad/s) anglerate
+   navigation.speedThroughWater (m/s) speed
+   navigation.headingMagnetic (rad) angle
+   navigation.speedOverGround (m/s) speed
+   environment.wind.speedApparent (m/s) speed
+   environment.wind.angleApparent (rad) wind
+   environment.depth.belowTransducer (m) meters
+
+   navigation.speedThroughWaterReferenceType (text)
+
+Calculated internally provided sufficient data is provided from the server.
+
+    navigation.courseOverGroundTrue if missing from server
+    navigation.courseOverGroundMagnetic if missing from server
+    navigation.headingTrue if missing from server
+    navigation.headingMagnetic if missing from server
+    performance.leeway needs roll, awa, stw
+
+    environment.wind.angleTrueWater if missing, requires awa, aws, stw
+    environment.wind.speedTrue if missing, requires awa, aws, stw
+
+    the following require tws and twa and stw and hdt 
+    performance.polarSpeed polar speed at this twa
+*    performance.polarSpeedRatio polar speed ratio
+    performance.oppositeTrackMagnetic opposite track magnetic bearing
+    performance.oppositeTrackTrue opposite track true bearing
+    performance.oppositeHeadingMagnetic opposite geading magnetic bearing
+    performance.oppositeHeadingTrue opposite geading true bearing
+    performance.targetTwa target twa on this track for best vmg
+    performance.targetStw target speed on at best vmg and angle
+    performance.targetVmg target vmg -ve == downwind
+    performance.vmg current vmg at polar speed
+    performance.polarVmg current vmg at best angle
+*    performance.polarVmgRatio ratio between vmg and optimal vmg
+    environment.wind.windDirectionTrue True wind direction
+    environment.wind.windDirectionMagnetic Magnetic wind direction
+
+</pre>
 <script src="../libs/json2.js"></script>
 <script src="eink.js"></script>
 <script src="calcs.js"></script>
